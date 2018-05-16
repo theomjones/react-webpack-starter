@@ -2,29 +2,39 @@ const fs = require('fs');
 const util = require('util');
 const { titleize } = require('@theomjones/stringlib');
 
-const asyncWriteFile = util.promisify(fs.writeFile);
-const asyncCreateDir = util.promisify(fs.mkdir);
+const {
+  logError,
+  logSuccess,
+  asyncWriteFile,
+  asyncCreateDir
+} = require('../helpers');
 
 exports.createComponent = async input => {
   const name = titleize(input._[1]);
-  await asyncCreateDir(`src/components/${name}`);
-  const moduleName = `${name}.js`;
-  const cssName = `${name}.css`;
+  try {
+    await asyncCreateDir(`src/components/${name}`);
+    const moduleName = `index.js`;
+    const cssName = `${name}.css`;
 
-  if (input.dumb) {
-    asyncWriteFile(
-      `src/components/${name}/${moduleName}`,
-      require('../data/dumbComponent')(name, cssName)
+    if (input.dumb) {
+      asyncWriteFile(
+        `src/components/${name}/${moduleName}`,
+        require('../data/dumbComponent')(name, cssName)
+      );
+    } else {
+      asyncWriteFile(
+        `src/components/${name}/${moduleName}`,
+        require('../data/classComponent')(name, cssName)
+      );
+    }
+    await asyncWriteFile(
+      `src/components/${name}/${cssName}`,
+      require('../data/css')(name)
     );
-  } else {
-    asyncWriteFile(
-      `src/components/${name}/${moduleName}`,
-      require('../data/classComponent')(name, cssName)
-    );
+    logSuccess(`Component "${name}" build in src/components/${name}/`);
+  } catch (error) {
+    if (error.code === 'EEXIST') {
+      logError('Component already exists');
+    }
   }
-  await asyncWriteFile(
-    `src/components/${name}/${cssName}`,
-    require('../data/css')(name)
-  );
-  console.log(`\nComponent "${name}" build in src/components/${name}/`);
 };
